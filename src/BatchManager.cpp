@@ -21,7 +21,7 @@ void BatchManager::processBatch()
             std::cout << "Processing directory: " << processType << std::endl;
 
             ProcessingParameters params;
-            Pipeline pipeline(openclManager);
+            Pipeline pipeline(&openclManager);
 
             auto processingStep =
                 stepFactory.createProcessingStep(processType, params);
@@ -75,7 +75,7 @@ void BatchManager::processBatchOnGPU(std::vector<Image>& images,
     std::vector<Image> allParts;
     for (auto& img : images)
     {
-        auto parts = splitter.split(img, 4);
+        auto parts = splitter.split(img.getImage(), 4);
         allParts.insert(allParts.end(), parts.begin(), parts.end());
     }
 
@@ -92,7 +92,7 @@ void BatchManager::processBatchOnGPU(std::vector<Image>& images,
                 {
                     gpuParts.push_back(allParts[i]);
                 }
-                pipeline.runBatch(gpuParts, gpuIndex);
+                pipeline.runBatch(gpuParts);
             });
     }
 

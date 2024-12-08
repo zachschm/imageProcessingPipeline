@@ -4,6 +4,13 @@
 #include <gtest/gtest.h>
 #include <opencv2/opencv.hpp>
 
+// This main function runs all tests.
+int main(int argc, char** argv)
+{
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+
 TEST(OpenCLGaussianBlurStep, BlurEffect)
 {
     OpenCLManager openclManager;

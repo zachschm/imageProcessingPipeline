@@ -64,14 +64,14 @@ void Pipeline::runBatch(std::vector<Image>& images)
                     {
                         // Split the image into parts for processing
                         std::vector<Image> parts =
-                            ImageSplitter::split(images[i], 4);
+                            ImageSplitter::split(images[i].getImage(), 4);
 
                         // Process each part using pipeline steps
                         for (Image& part : parts)
                         {
                             for (const auto& step : steps)
                             {
-                                step->process(part, gpuIndex);
+                                step->process(part);
                             }
                         }
 

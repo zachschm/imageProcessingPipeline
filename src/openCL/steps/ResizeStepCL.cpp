@@ -1,5 +1,4 @@
 #include "ResizeStepCL.h"
-#include <omp.h>
 
 ResizeStepCL::ResizeStepCL(OpenCLManager& manager, int newWidth, int newHeight)
     : manager(manager)
@@ -16,9 +15,9 @@ void ResizeStepCL::process(Image& img)
     int height = img.getImage().rows;
 
     // Split the image into 4 parts
-    auto subImages = ImageSplitter::split(img, 4);
+    auto subImages = ImageSplitter::split(img.getImage(), 4);
 
-    std::vector<cv::Mat> resizedParts(4);
+    std::vector<Image> resizedParts;  // Change to store `Image` objects
 
     // Process each part in parallel on separate GPUs
 #pragma omp parallel for
@@ -26,10 +25,10 @@ void ResizeStepCL::process(Image& img)
     {
         int gpuIndex = i;
         cl::Image2D inputImageBuffer =
-            manager.createImage2DFromMat(subImages[i], gpuIndex);
-        cl::Image2D outputImageBuffer(
-            manager.getContext(gpuIndex), CL_MEM_WRITE_ONLY,
-            cl::ImageFormat(CL_RGBA, CL_UNORM_INT8), newWidth / 2, newHeight);
+            manager.createImage2DFromMat(subImages[i].getImage(), gpuIndex);
+        cl::Image2D outputImageBuffer(manager.getContext(), CL_MEM_WRITE_ONLY,
+                                      cl::ImageFormat(CL_RGBA, CL_UNORM_INT8),
+                                      newWidth / 2, newHeight);
 
         float scaleX = static_cast<float>(newWidth) / width;
         float scaleY = static_cast<float>(newHeight) / height;
@@ -45,14 +44,16 @@ void ResizeStepCL::process(Image& img)
                                    cl::NDRange(newWidth / 2, newHeight / 2));
         queue.finish();
 
-        resizedParts[i] = manager.readImage2DToMat(
+        cv::Mat processedPart = manager.readImage2DToMat(
             outputImageBuffer, newWidth / 2, newHeight / 2, gpuIndex);
+
+#pragma omp critical
+        resizedParts.emplace_back(processedPart);  // Wrap `cv::Mat` in `Image`
     }
 
     // Merge the resized parts
-    cv::Mat resizedImage =
-        ImageMerger::merge(resizedParts, newWidth, newHeight);
+    Image resizedImage = ImageMerger::merge(resizedParts);
 
     // Update the image with the resized data
-    img.setImage(resizedImage);
+    img.setImage(resizedImage.getImage());
 }

@@ -1,5 +1,4 @@
 #include "SharpeningStepCL.h"
-#include <omp.h>
 #include <opencv2/opencv.hpp>
 #include <stdexcept>
 
@@ -29,18 +28,20 @@ void SharpeningStepCL::process(Image& img)
     // Split the image for multi-GPU processing
     auto subImages =
         ImageSplitter::split(grayscaleImage, manager.getDeviceCount());
-    std::vector<cv::Mat> processedSubImages(subImages.size());
+    std::vector<Image> processedSubImages;  // Changed to store `Image` objects
 
 #pragma omp parallel for
     for (int i = 0; i < subImages.size(); ++i)
     {
-        cl::Image2D inputBuffer = manager.createImage2DFromMat(subImages[i], i);
-        cl::Image2D outputBuffer(manager.getContext(i), CL_MEM_WRITE_ONLY,
+        cl::Image2D inputBuffer =
+            manager.createImage2DFromMat(subImages[i].getImage(), i);
+        cl::Image2D outputBuffer(manager.getContext(), CL_MEM_WRITE_ONLY,
                                  cl::ImageFormat(CL_R, CL_FLOAT),
-                                 subImages[i].cols, subImages[i].rows);
+                                 subImages[i].getCols(),
+                                 subImages[i].getRows());
 
         cl::Buffer kernelBuffer(
-            manager.getContext(i), CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+            manager.getContext(), CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
             sizeof(float) * sharpeningKernel.size(), sharpeningKernel.data());
 
         // Set up kernel
@@ -51,19 +52,22 @@ void SharpeningStepCL::process(Image& img)
 
         // Execute kernel
         cl::CommandQueue& queue = manager.getQueue(i);
-        cl::NDRange globalSize(subImages[i].cols, subImages[i].rows);
+        cl::NDRange globalSize(subImages[i].getCols(), subImages[i].getRows());
         queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalSize);
         queue.finish();
 
         // Retrieve processed sub-image
-        processedSubImages[i] = manager.readImage2DToMat(
-            outputBuffer, subImages[i].cols, subImages[i].rows, i);
+        cv::Mat processedPart = manager.readImage2DToMat(
+            outputBuffer, subImages[i].getCols(), subImages[i].getRows(), i);
+
+#pragma omp critical
+        processedSubImages.emplace_back(
+            processedPart);  // Wrap `cv::Mat` in `Image`
     }
 
     // Merge processed sub-images
-    cv::Mat mergedImage = ImageMerger::merge(
-        processedSubImages, grayscaleImage.cols, grayscaleImage.rows);
+    Image mergedImage = ImageMerger::merge(processedSubImages);
 
     // Set the processed image
-    img.setImage(mergedImage);
+    img.setImage(mergedImage.getImage());
 }

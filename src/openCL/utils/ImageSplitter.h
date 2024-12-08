@@ -10,7 +10,7 @@ class ImageSplitter
 {
  public:
     // Split an image into `numParts` vertical strips
-    static std::vector<Image> split(const Image& img, int numParts)
+    static std::vector<Image> split(const cv::Mat& img, int numParts)
     {
         if (numParts <= 0)
         {
@@ -18,7 +18,7 @@ class ImageSplitter
                 "Number of parts must be greater than 0.");
         }
 
-        cv::Mat original = img.getImage();
+        cv::Mat original = img;
         int width = original.cols;
         int height = original.rows;
 

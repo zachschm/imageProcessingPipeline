@@ -1,5 +1,4 @@
 #include "SaturationStepCL.h"
-#include <omp.h>
 
 SaturationStepCL::SaturationStepCL(OpenCLManager& manager, float scale)
     : manager(manager)
@@ -25,15 +24,17 @@ void SaturationStepCL::process(Image& img)
     // Split image for multi-GPU processing
     auto subImages = ImageSplitter::split(hsvImage, manager.getDeviceCount());
 
-    std::vector<cv::Mat> processedSubImages(subImages.size());
+    std::vector<Image> processedSubImages;  // Changed to store `Image` objects
 
 #pragma omp parallel for
     for (int i = 0; i < subImages.size(); ++i)
     {
-        cl::Image2D inputBuffer = manager.createImage2DFromMat(subImages[i], i);
-        cl::Image2D outputBuffer(manager.getContext(i), CL_MEM_WRITE_ONLY,
+        cl::Image2D inputBuffer =
+            manager.createImage2DFromMat(subImages[i].getImage(), i);
+        cl::Image2D outputBuffer(manager.getContext(), CL_MEM_WRITE_ONLY,
                                  cl::ImageFormat(CL_RGBA, CL_UNORM_INT8),
-                                 subImages[i].cols, subImages[i].rows);
+                                 subImages[i].getCols(),
+                                 subImages[i].getRows());
 
         // Set kernel arguments
         kernel.setArg(0, inputBuffer);
@@ -42,19 +43,22 @@ void SaturationStepCL::process(Image& img)
 
         // Execute kernel
         cl::CommandQueue& queue = manager.getQueue(i);
-        cl::NDRange globalSize(subImages[i].cols, subImages[i].rows);
+        cl::NDRange globalSize(subImages[i].getCols(), subImages[i].getRows());
         queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalSize);
         queue.finish();
 
         // Retrieve processed sub-image
-        processedSubImages[i] = manager.readImage2DToMat(
-            outputBuffer, subImages[i].cols, subImages[i].rows, i);
+        cv::Mat processedPart = manager.readImage2DToMat(
+            outputBuffer, subImages[i].getCols(), subImages[i].getRows(), i);
+
+#pragma omp critical
+        processedSubImages.emplace_back(
+            processedPart);  // Wrap `cv::Mat` in `Image`
     }
 
     // Merge processed sub-images
-    cv::Mat mergedImage =
-        ImageMerger::merge(processedSubImages, hsvImage.cols, hsvImage.rows);
+    Image mergedImage = ImageMerger::merge(processedSubImages);
 
     // Convert back to BGR
-    cv::cvtColor(mergedImage, img.getImage(), cv::COLOR_HSV2BGR);
+    cv::cvtColor(mergedImage.getImage(), img.getImage(), cv::COLOR_HSV2BGR);
 }

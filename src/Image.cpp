@@ -25,7 +25,22 @@ cv::Mat& Image::getImage()
     return image;
 }
 
+const cv::Mat& Image::getImage() const  // Const version
+{
+    return image;
+}
+
 void Image::setImage(const cv::Mat& img)
 {
     image = img;
+}
+
+const int Image::getRows() const
+{
+    return image.rows;
+}
+
+const int Image::getCols() const
+{
+    return image.cols;
 }

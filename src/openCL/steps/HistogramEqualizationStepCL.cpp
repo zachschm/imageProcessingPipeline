@@ -35,21 +35,21 @@ void HistogramEqualizationStepCL::process(Image& img)
     {
         int segmentHeight = segments[gpuIndex].rows;
 
-        inputBuffers[gpuIndex] =
-            cl::Buffer(openclManager.getContext(gpuIndex),
-                       CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                       width * segmentHeight, segments[gpuIndex].data);
+        inputBuffers[gpuIndex] = cl::Buffer(
+            openclManager.getContext(), CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+            static_cast<size_t>(width * segmentHeight),
+            segments[gpuIndex].data);
 
         outputBuffers[gpuIndex] =
-            cl::Buffer(openclManager.getContext(gpuIndex), CL_MEM_WRITE_ONLY,
+            cl::Buffer(openclManager.getContext(), CL_MEM_WRITE_ONLY,
                        width * segmentHeight);
 
         histBuffers[gpuIndex] =
-            cl::Buffer(openclManager.getContext(gpuIndex), CL_MEM_READ_WRITE,
+            cl::Buffer(openclManager.getContext(), CL_MEM_READ_WRITE,
                        sizeof(int) * 256, nullptr);
 
         cdfBuffers[gpuIndex] =
-            cl::Buffer(openclManager.getContext(gpuIndex), CL_MEM_READ_WRITE,
+            cl::Buffer(openclManager.getContext(), CL_MEM_READ_WRITE,
                        sizeof(int) * 256, nullptr);
 
         kernel.setArg(0, inputBuffers[gpuIndex]);

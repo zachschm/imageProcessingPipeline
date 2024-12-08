@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
         }
 
         // Initialize the batch manager with the selected processing mode
-        BatchManager batchManager(imageDirectory, openclManager);
+        BatchManager batchManager(imageDirectory, *openclManager);
 
         // Process the batch
         batchManager.processBatch();

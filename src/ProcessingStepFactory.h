@@ -5,15 +5,21 @@
 #include "CenterCropStep.h"
 #include "ContrastStep.h"
 #include "GaussianBlurStep.h"
+#include "GaussianBlurStepCL.h"
 #include "GrayscaleStep.h"
+#include "GrayscaleStepCL.h"
 #include "HistogramEqualizationStep.h"
-#include "OpenCLGrayscaleStep.h"
+#include "HistogramEqualizationStepCl.h"  // Ensure correct case
 #include "ProcessingParameters.h"
 #include "ResizeStep.h"
+#include "ResizeStepCL.h"
 #include "RotationFlipStep.h"
 #include "SaturationStep.h"
+#include "SaturationStepCL.h"
 #include "SharpeningStep.h"
+#include "SharpeningStepCL.h"
 #include "SobelEdgeStep.h"
+#include "SobelEdgeStepCL.h"
 #include "ThresholdStep.h"
 #include <functional>
 #include <memory>
@@ -23,7 +29,6 @@
 class ProcessingStepFactory
 {
  public:
-    // Using a function pointer type for creating processing steps
     using StepCreator = std::function<std::unique_ptr<ProcessingStep>(
         const ProcessingParameters&)>;
 
@@ -39,35 +44,39 @@ class ProcessingStepFactory
 
         if (processingMode == "gpu")
         {
-            stepCreators["grayscale"] = [this]()
-            { return std::make_unique<OpenCLGrayscaleStep>(openclManager); };
+            stepCreators["grayscale"] = [this](const ProcessingParameters&)
+            { return std::make_unique<GrayscaleStepCL>(openclManager); };
 
-            stepCreators["resize"] = [this]()
+            stepCreators["resize"] = [this](const ProcessingParameters& params)
             {
-                return std::make_unique<OpenCLResizeStep>(openclManager,
-                                                          gpuIndex, 800, 600);
+                return std::make_unique<ResizeStepCL>(
+                    openclManager, params.resizeParams.width,
+                    params.resizeParams.height);
             };
 
-            stepCreators["gaussian_blur"] = [this]()
+            stepCreators["gaussian_blur"] =
+                [this](const ProcessingParameters& params)
             {
-                return std::make_unique<OpenCLGaussianBlurStep>(
-                    openclManager, 5, 1.0f);  // Example kernel size and sigma
+                return std::make_unique<GaussianBlurStepCL>(
+                    openclManager, params.gaussianBlurParams.kernelSize,
+                    params.gaussianBlurParams.sigmaX);
             };
 
-            stepCreators["edge_detection"] = [this]()
-            { return std::make_unique<OpenCLSobelEdgeStep>(openclManager); };
+            stepCreators["edge_detection"] = [this](const ProcessingParameters&)
+            { return std::make_unique<SobelEdgeStepCl>(openclManager); };
 
-            stepCreators["histogram_equalization"] = [this]() {
-                return std::make_unique<OpenCLHistogramEqualizationStep>(
-                    openclManager);
-            };
+            stepCreators["histogram_equalization"] =
+                [this](const ProcessingParameters&) {
+                    return std::make_unique<HistogramEqualizationStepCL>(
+                        openclManager);
+                };
 
-            stepCreators["sharpening"] = [this]()
-            { return std::make_unique<OpenCLSharpeningStep>(openclManager); };
+            stepCreators["sharpening"] = [this](const ProcessingParameters&)
+            { return std::make_unique<SharpeningStepCL>(openclManager, 3); };
         }
         else
         {
-
+            // CPU steps
             stepCreators["grayscale"] = [](const ProcessingParameters&)
             { return std::make_unique<GrayscaleStep>(); };
 
@@ -94,11 +103,11 @@ class ProcessingStepFactory
                         params.saturationParams.scale);
                 };
 
-            stepCreators["sharpening"] = [](const ProcessingParameters& params)
+            stepCreators["sharpening"] = [](const ProcessingParameters&)
             { return std::make_unique<SharpeningStep>(); };
 
             stepCreators["histogram_equalization"] =
-                [](const ProcessingParameters& params)
+                [](const ProcessingParameters&)
             { return std::make_unique<HistogramEqualizationStep>(); };
         }
 
@@ -130,7 +139,6 @@ class ProcessingStepFactory
         };
     }
 
-    // Function to create a processing step based on the processType
     std::unique_ptr<ProcessingStep>
     createProcessingStep(const std::string& processType,
                          const ProcessingParameters& params)
@@ -138,14 +146,13 @@ class ProcessingStepFactory
         auto it = stepCreators.find(processType);
         if (it != stepCreators.end())
         {
-            return it->second(
-                params);  // Call the corresponding creation function
+            return it->second(params);
         }
-        return nullptr;  // Return nullptr if the processType is not found
+        return nullptr;
     }
 
  private:
-    // Map to store processing type to creation function mapping
+    OpenCLManager& openclManager;
     std::unordered_map<std::string, StepCreator> stepCreators;
 };
 

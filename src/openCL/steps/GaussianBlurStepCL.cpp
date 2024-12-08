@@ -2,7 +2,7 @@
 #include <cmath>
 #include <stdexcept>
 
-GaussianBlurStepCl::GaussianBlurStepCL(OpenCLManager& manager, int kernelSize,
+GaussianBlurStepCL::GaussianBlurStepCL(OpenCLManager& manager, int kernelSize,
                                        float sigma)
     : openclManager(manager)
     , kernelSize(kernelSize)
@@ -25,26 +25,25 @@ void GaussianBlurStepCL::process(Image& img)
     // Split image into 4 parts
     auto subImages =
         ImageSplitter::split(inputImage, openclManager.getDeviceCount());
-    std::vector<cv::Mat> processedSubImages(subImages.size());
+    std::vector<Image> processedSubImages(subImages.size());
 
 #pragma omp parallel for
     for (int gpuIndex = 0; gpuIndex < subImages.size(); ++gpuIndex)
     {
         const auto& subImage = subImages[gpuIndex];
-        int width = subImage.cols;
-        int height = subImage.rows;
+        int width = subImage.getImage().cols;
+        int height = subImage.getImage().rows;
 
         // Create OpenCL buffers
         cl::Image2D inputBuffer =
-            openclManager.createImage2DFromMat(subImage, gpuIndex);
-        cl::Image2D outputBuffer(
-            openclManager.getContext(gpuIndex), CL_MEM_WRITE_ONLY,
-            cl::ImageFormat(CL_R, CL_FLOAT), width, height);
+            openclManager.createImage2DFromMat(subImage.getImage(), gpuIndex);
+        cl::Image2D outputBuffer(openclManager.getContext(), CL_MEM_WRITE_ONLY,
+                                 cl::ImageFormat(CL_R, CL_FLOAT), width,
+                                 height);
 
-        cl::Buffer kernelBuffer(openclManager.getContext(gpuIndex),
-                                CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                sizeof(float) * gaussianKernel.size(),
-                                gaussianKernel.data());
+        cl::Buffer kernelBuffer(
+            openclManager.getContext(), CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+            sizeof(float) * gaussianKernel.size(), gaussianKernel.data());
 
         kernel.setArg(0, inputBuffer);
         kernel.setArg(1, outputBuffer);
@@ -57,15 +56,15 @@ void GaussianBlurStepCL::process(Image& img)
                                    cl::NDRange(width, height));
         queue.finish();
 
-        // Retrieve processed sub-image
-        processedSubImages[gpuIndex] = openclManager.readImage2DToMat(
+        // Retrieve processed sub-image and wrap it in an Image object
+        cv::Mat processedMat = openclManager.readImage2DToMat(
             outputBuffer, width, height, gpuIndex);
+        processedSubImages[gpuIndex] = Image(processedMat);
     }
 
     // Merge processed images
-    cv::Mat outputImage = ImageMerger::merge(processedSubImages,
-                                             inputImage.cols, inputImage.rows);
-    img.setImage(outputImage);
+    Image mergedImage = ImageMerger::merge(processedSubImages);
+    img.setImage(mergedImage.getImage());
 }
 
 void GaussianBlurStepCL::precomputeKernel()

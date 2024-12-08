@@ -1,47 +1,50 @@
-# src/Makefile
 
-SUBDIRS := cpu openCL
+# Source files
+SRCS := main.cpp BatchManager.cpp Image.cpp Pipeline.cpp \
+		openCL/OpenCLManager.cpp \
+		$(wildcard openCL/steps/*.cpp)
+		
+# Object and dependency files
+# OBJS := $(addprefix .lib/,$(notdir $(SRCS:.cpp=.o)))
+# DEPS := $(addprefix .depends/,$(notdir $(SRCS:.cpp=.d)))
 
-SRCS := main.cpp BatchManager.cpp Image.cpp Pipeline.cpp
-OBJS := $(addprefix .lib/,$(SRCS:.cpp=.o))
-DEPS := $(addprefix .depends/,$(SRCS:.cpp=.d))
+OBJS := $(SRCS:%.cpp=.lib/%.o)
+DEPS := $(SRCS:%.cpp=.depends/%.d)
 
-SUBDIR_OBJS := $(shell find $(SUBDIRS) -name '*.o' -path '*/.lib/*.o')
 
-INCLUDES := -I../include
+# Compiler and flags
 CXX := g++
-CXXFLAGS := -Wall -Wextra -std=c++17 $(INCLUDES) -MMD -MP
-LDFLAGS :=
+CXXFLAGS := -std=c++17 -I../include \
+             -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/openCL/utils/ \
+             -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/openCL/ \
+             -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/cpu/steps/ \
+             -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/openCL/steps/ \
+             -I. `pkg-config --cflags opencv4`
 
+LDFLAGS := `pkg-config --libs opencv4` -framework OpenCL
+
+# Directories
 BIN_DIR := ../bin
 TARGET := $(BIN_DIR)/ImageProcessingPipeline
 
-.PHONY: all test clean $(SUBDIRS)
+# Default target
+.PHONY: all clean
 
-all: $(SUBDIRS) $(TARGET)
+all: $(TARGET)
 
-$(TARGET): $(OBJS) $(SUBDIR_OBJS)
+$(TARGET): $(OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
+# Object file rule
 .lib/%.o: %.cpp
-	@mkdir -p .lib .depends
+	@mkdir -p $(dir $@) $(dir $(subst .lib,.depends,$@))
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-	mv $(patsubst %.o,%.d,$@) .depends/
+	$(CXX) $(CXXFLAGS) -MM $< > $(subst .lib,.depends,$@:.o=.d)
 
+# Include dependency files
 -include $(DEPS)
 
-$(SUBDIRS):
-	$(MAKE) -C $@
-
-test:
-	@for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir test; \
-	done
-
+# Clean rule
 clean:
-	rm -rf $(TARGET) .lib .depends
-	@for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir clean; \
-	done
-
+	rm -rf $(BIN_DIR) .lib .depends

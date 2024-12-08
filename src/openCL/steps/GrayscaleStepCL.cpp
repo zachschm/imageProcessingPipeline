@@ -34,11 +34,11 @@ void GrayscaleStepCL::process(Image& img)
             inputImage.rowRange(startRow, startRow + currentChunkHeight);
         size_t chunkSize = chunk.total() * chunk.elemSize();
 
-        cl::Buffer inputBuffer(openclManager.getContext(gpuIndex),
+        cl::Buffer inputBuffer(openclManager.getContext(),
                                CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                                chunkSize, chunk.data);
-        cl::Buffer outputBuffer(openclManager.getContext(gpuIndex),
-                                CL_MEM_WRITE_ONLY, currentChunkHeight * width);
+        cl::Buffer outputBuffer(openclManager.getContext(), CL_MEM_WRITE_ONLY,
+                                currentChunkHeight * width);
 
         kernel.setArg(0, inputBuffer);
         kernel.setArg(1, outputBuffer);
