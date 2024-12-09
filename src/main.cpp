@@ -24,8 +24,9 @@ int main(int argc, char* argv[])
                 "Invalid PROCESSING_MODE. Use 'cpu' or 'gpu'.");
         }
 
-        // Initialize OpenCLManager if in GPU mode
+        // Declare OpenCLManager pointer
         OpenCLManager* openclManager = nullptr;
+
         if (processingMode == "gpu")
         {
             std::cout << "Initializing OpenCLManager for GPU processing..."
@@ -38,13 +39,12 @@ int main(int argc, char* argv[])
                     "least 4 GPUs are accessible.");
             }
         }
-        else
-        {
-            std::cout << "Processing mode set to CPU." << std::endl;
-        }
 
-        // Initialize the batch manager with the selected processing mode
-        BatchManager batchManager(imageDirectory, *openclManager);
+        // Initialize the batch manager
+        OpenCLManager dummyManager;  // Placeholder for CPU mode
+        BatchManager batchManager(imageDirectory, (processingMode == "gpu")
+                                                      ? *openclManager
+                                                      : dummyManager);
 
         // Process the batch
         batchManager.processBatch();
