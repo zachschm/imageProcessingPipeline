@@ -1,3 +1,7 @@
+# Check if PROJECT_ROOT is set
+ifndef PROJECT_ROOT
+$(error PROJECT_ROOT environment variable needs to be set)
+endif
 
 # Source files
 SRCS := main.cpp BatchManager.cpp Image.cpp Pipeline.cpp \
@@ -14,12 +18,13 @@ DEPS := $(SRCS:%.cpp=.depends/%.d)
 
 # Compiler and flags
 CXX := g++
-CXXFLAGS := -std=c++17 -I../include \
-             -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/openCL/utils/ \
-             -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/openCL/ \
-             -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/cpu/steps/ \
-             -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/openCL/steps/ \
+CXXFLAGS := -std=c++17 -I$(PROJECT_ROOT)/include \
+             -I$(PROJECT_ROOT)/src/openCL/utils/ \
+             -I$(PROJECT_ROOT)/src/openCL/ \
+             -I$(PROJECT_ROOT)/src/cpu/steps/ \
+             -I$(PROJECT_ROOT)/src/openCL/steps/ \
              -I.
+
 
 LDFLAGS := -framework OpenCL -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
