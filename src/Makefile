@@ -19,9 +19,10 @@ CXXFLAGS := -std=c++17 -I../include \
              -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/openCL/ \
              -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/cpu/steps/ \
              -I/Users/zachschmitz/SoftwareEngineering/c++/imageProcessingPipeline/src/openCL/steps/ \
-             -I. `pkg-config --cflags opencv4`
+             -I.
 
-LDFLAGS := `pkg-config --libs opencv4` -framework OpenCL
+LDFLAGS := -framework OpenCL -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
 
 # Directories
 BIN_DIR := ../bin
