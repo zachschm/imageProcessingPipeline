@@ -2,8 +2,6 @@
 #define SHARPENINGSTEPCL_H
 
 #include "Image.h"
-#include "ImageMerger.h"
-#include "ImageSplitter.h"
 #include "OpenCLManager.h"
 #include "ProcessingStep.h"
 #include <vector>

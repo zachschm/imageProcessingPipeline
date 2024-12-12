@@ -2,8 +2,6 @@
 #define RESIZESTEPCL_H
 
 #include "Image.h"
-#include "ImageMerger.h"
-#include "ImageSplitter.h"
 #include "OpenCLManager.h"
 #include "ProcessingStep.h"
 #include <opencv2/opencv.hpp>

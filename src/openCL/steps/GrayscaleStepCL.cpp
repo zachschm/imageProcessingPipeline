@@ -18,65 +18,32 @@ void GrayscaleStepCL::process(Image& img)
 
     int width = inputImage.cols;
     int height = inputImage.rows;
-    int chunkHeight = height / 4;
 
-    std::vector<cl::Event> events;
-    std::vector<cv::Mat> outputChunks(4);
-    std::vector<cl::Buffer> outputBuffers(4);
+    // Create OpenCL buffers
+    cl::Buffer inputBuffer(
+        openclManager.getContext(), CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        inputImage.total() * inputImage.elemSize(), inputImage.data);
+    cl::Buffer outputBuffer(openclManager.getContext(), CL_MEM_WRITE_ONLY,
+                            width * height * sizeof(unsigned char));
 
-    for (int gpuIndex = 0; gpuIndex < 4; ++gpuIndex)
-    {
-        int startRow = gpuIndex * chunkHeight;
-        int currentChunkHeight =
-            (gpuIndex == 3) ? (height - startRow) : chunkHeight;
+    // Set kernel arguments
+    kernel.setArg(0, inputBuffer);
+    kernel.setArg(1, outputBuffer);
+    kernel.setArg(2, width);
+    kernel.setArg(3, height);
 
-        cv::Mat chunk =
-            inputImage.rowRange(startRow, startRow + currentChunkHeight);
-        size_t chunkSize = chunk.total() * chunk.elemSize();
+    // Execute kernel
+    cl::CommandQueue& queue =
+        openclManager.getQueue(0 /* Assume GPU is pre-selected */);
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+                               cl::NDRange(width, height));
+    queue.finish();
 
-        cl::Buffer inputBuffer(openclManager.getContext(),
-                               CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                               chunkSize, chunk.data);
-        cl::Buffer outputBuffer(openclManager.getContext(), CL_MEM_WRITE_ONLY,
-                                currentChunkHeight * width);
-
-        kernel.setArg(0, inputBuffer);
-        kernel.setArg(1, outputBuffer);
-        kernel.setArg(2, width);
-        kernel.setArg(3, height);
-        kernel.setArg(4, startRow);
-
-        auto& queue = openclManager.getQueue(gpuIndex);
-        cl::Event event;
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                                   cl::NDRange(width, currentChunkHeight),
-                                   cl::NullRange, nullptr, &event);
-        events.push_back(event);
-
-        outputBuffers[gpuIndex] = outputBuffer;
-        outputChunks[gpuIndex] = cv::Mat(currentChunkHeight, width, CV_8UC1);
-    }
-
-    for (auto& event : events)
-    {
-        event.wait();
-    }
-
-    for (int gpuIndex = 0; gpuIndex < 4; ++gpuIndex)
-    {
-        auto& queue = openclManager.getQueue(gpuIndex);
-        queue.enqueueReadBuffer(outputBuffers[gpuIndex], CL_TRUE, 0,
-                                outputChunks[gpuIndex].total(),
-                                outputChunks[gpuIndex].data);
-    }
-
+    // Retrieve processed data
     cv::Mat outputImage(height, width, CV_8UC1);
-    for (int gpuIndex = 0; gpuIndex < 4; ++gpuIndex)
-    {
-        int startRow = gpuIndex * chunkHeight;
-        outputChunks[gpuIndex].copyTo(outputImage.rowRange(
-            startRow, startRow + outputChunks[gpuIndex].rows));
-    }
+    queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, outputImage.total(),
+                            outputImage.data);
 
+    // Update the image with the processed grayscale data
     img.setImage(outputImage);
 }

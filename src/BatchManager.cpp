@@ -70,29 +70,26 @@ void BatchManager::processBatchOnGPU(std::vector<Image>& images,
                                      Pipeline& pipeline,
                                      const std::string& processType)
 {
-    ImageSplitter splitter;
-    ImageMerger merger;
-    std::vector<Image> allParts;
-    for (auto& img : images)
-    {
-        auto parts = splitter.split(img.getImage(), 4);
-        allParts.insert(allParts.end(), parts.begin(), parts.end());
-    }
-
-    std::vector<Image> processedParts(4);
+    // Determine the number of available GPUs
+    int numGPUs = openclManager.getDeviceCount();
     std::vector<std::thread> gpuThreads;
 
-    for (int gpuIndex = 0; gpuIndex < 4; ++gpuIndex)
+    // Divide images among GPUs and process
+    for (int gpuIndex = 0; gpuIndex < numGPUs; ++gpuIndex)
     {
         gpuThreads.emplace_back(
             [&, gpuIndex]()
             {
-                std::vector<Image> gpuParts;
-                for (size_t i = gpuIndex; i < allParts.size(); i += 4)
+                std::vector<Image> gpuSubset;
+                for (size_t i = gpuIndex; i < images.size(); i += numGPUs)
                 {
-                    gpuParts.push_back(allParts[i]);
+                    gpuSubset.push_back(images[i]);
                 }
-                pipeline.runBatch(gpuParts);
+
+                for (auto& img : gpuSubset)
+                {
+                    pipeline.run(img);
+                }
             });
     }
 
@@ -102,13 +99,6 @@ void BatchManager::processBatchOnGPU(std::vector<Image>& images,
         {
             thread.join();
         }
-    }
-
-    for (size_t i = 0; i < images.size(); ++i)
-    {
-        auto parts = std::vector<Image>(allParts.begin() + i * 4,
-                                        allParts.begin() + (i + 1) * 4);
-        images[i] = merger.merge(parts);
     }
 
     saveImages(images, processType);

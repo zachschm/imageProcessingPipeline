@@ -18,9 +18,6 @@ class Pipeline
     // Run the pipeline on a single image
     void run(Image& img);
 
-    // Run the pipeline on a batch of images
-    void runBatch(std::vector<Image>& images);
-
  private:
     OpenCLManager* openclManager;  // Manager for OpenCL resources
     std::vector<std::unique_ptr<ProcessingStep>>

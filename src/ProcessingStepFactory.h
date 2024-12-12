@@ -63,7 +63,7 @@ class ProcessingStepFactory
             };
 
             stepCreators["edge_detection"] = [this](const ProcessingParameters&)
-            { return std::make_unique<SobelEdgeStepCl>(openclManager); };
+            { return std::make_unique<SobelEdgeStepCL>(openclManager); };
 
             stepCreators["histogram_equalization"] =
                 [this](const ProcessingParameters&) {

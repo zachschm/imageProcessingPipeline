@@ -22,49 +22,36 @@ void GaussianBlurStepCL::process(Image& img)
         throw std::runtime_error("Input image is empty.");
     }
 
-    // Split image into 4 parts
-    auto subImages =
-        ImageSplitter::split(inputImage, openclManager.getDeviceCount());
-    std::vector<Image> processedSubImages(subImages.size());
+    int width = inputImage.cols;
+    int height = inputImage.rows;
 
-#pragma omp parallel for
-    for (int gpuIndex = 0; gpuIndex < subImages.size(); ++gpuIndex)
-    {
-        const auto& subImage = subImages[gpuIndex];
-        int width = subImage.getImage().cols;
-        int height = subImage.getImage().rows;
+    // Create OpenCL buffers
+    cl::Image2D inputBuffer = openclManager.createImage2DFromMat(
+        inputImage, 0 /* Assume GPU is pre-selected */);
+    cl::Image2D outputBuffer(openclManager.getContext(), CL_MEM_WRITE_ONLY,
+                             cl::ImageFormat(CL_R, CL_FLOAT), width, height);
 
-        // Create OpenCL buffers
-        cl::Image2D inputBuffer =
-            openclManager.createImage2DFromMat(subImage.getImage(), gpuIndex);
-        cl::Image2D outputBuffer(openclManager.getContext(), CL_MEM_WRITE_ONLY,
-                                 cl::ImageFormat(CL_R, CL_FLOAT), width,
-                                 height);
+    cl::Buffer kernelBuffer(
+        openclManager.getContext(), CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        sizeof(float) * gaussianKernel.size(), gaussianKernel.data());
 
-        cl::Buffer kernelBuffer(
-            openclManager.getContext(), CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-            sizeof(float) * gaussianKernel.size(), gaussianKernel.data());
+    // Set kernel arguments
+    kernel.setArg(0, inputBuffer);
+    kernel.setArg(1, outputBuffer);
+    kernel.setArg(2, kernelBuffer);
+    kernel.setArg(3, kernelSize);
 
-        kernel.setArg(0, inputBuffer);
-        kernel.setArg(1, outputBuffer);
-        kernel.setArg(2, kernelBuffer);
-        kernel.setArg(3, kernelSize);
+    // Execute kernel
+    cl::CommandQueue& queue =
+        openclManager.getQueue(0 /* Assume GPU is pre-selected */);
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+                               cl::NDRange(width, height));
+    queue.finish();
 
-        // Execute kernel
-        cl::CommandQueue& queue = openclManager.getQueue(gpuIndex);
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                                   cl::NDRange(width, height));
-        queue.finish();
-
-        // Retrieve processed sub-image and wrap it in an Image object
-        cv::Mat processedMat = openclManager.readImage2DToMat(
-            outputBuffer, width, height, gpuIndex);
-        processedSubImages[gpuIndex] = Image(processedMat);
-    }
-
-    // Merge processed images
-    Image mergedImage = ImageMerger::merge(processedSubImages);
-    img.setImage(mergedImage.getImage());
+    // Retrieve processed data
+    cv::Mat processedMat =
+        openclManager.readImage2DToMat(outputBuffer, width, height, 0);
+    img.setImage(processedMat);
 }
 
 void GaussianBlurStepCL::precomputeKernel()
