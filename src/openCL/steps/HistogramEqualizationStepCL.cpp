@@ -1,4 +1,4 @@
-#include "HistogramEqualizationStepCL.h"
+#include "HistogramEqualizationStepCl.h"
 
 HistogramEqualizationStepCL::HistogramEqualizationStepCL(OpenCLManager& manager)
     : openclManager(manager)

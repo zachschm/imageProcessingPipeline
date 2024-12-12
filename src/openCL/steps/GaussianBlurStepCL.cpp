@@ -1,4 +1,4 @@
-#include "GaussianBlurStepCl.h"
+#include "GaussianBlurStepCL.h"
 #include <cmath>
 #include <stdexcept>
 

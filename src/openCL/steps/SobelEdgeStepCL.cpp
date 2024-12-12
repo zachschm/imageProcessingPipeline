@@ -1,4 +1,4 @@
-#include "SobelEdgeStepCl.h"
+#include "SobelEdgeStepCL.h"
 #include <opencv2/opencv.hpp>
 #include <stdexcept>
 
