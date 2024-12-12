@@ -1,1 +1,3 @@
 /ogMakefile.txt
+*.o
+*.d
