@@ -6,7 +6,8 @@ SharpeningStepCL::SharpeningStepCL(OpenCLManager& manager, int kernelSize)
     : manager(manager)
     , kernelSize(kernelSize)
 {
-    manager.loadKernel("sharpening", "src/opencl/kernels/sharpening.cl");
+    std::string kernelPath = std::string(std::getenv("PROJECT_ROOT")) + "/src/openCL/kernels/sharpening.cl";
+    manager.loadKernel("sharpening", kernelPath);
     kernel = manager.getKernel("sharpening");
 
     // Define a sharpening kernel

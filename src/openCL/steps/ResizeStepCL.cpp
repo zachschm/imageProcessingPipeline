@@ -5,7 +5,8 @@ ResizeStepCL::ResizeStepCL(OpenCLManager& manager, int newWidth, int newHeight)
     , newWidth(newWidth)
     , newHeight(newHeight)
 {
-    manager.loadKernel("resize", "src/opencl/kernels/resize.cl");
+    std::string kernelPath = std::string(std::getenv("PROJECT_ROOT")) + "/src/openCL/kernels/resize.cl";
+    manager.loadKernel("resize", kernelPath);
     kernel = manager.getKernel("resize");
 }
 

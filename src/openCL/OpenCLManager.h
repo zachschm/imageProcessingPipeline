@@ -55,7 +55,7 @@ class OpenCLManager
     cl::Buffer getReusableBuffer(size_t size, int gpuIndex);
     std::string readKernelFile(const std::string& filePath) const;
 
-    std::string kernelDir = "src/opencl/kernels/";
+    std::string kernelDir = "src/openCL/kernels/";
 };
 
 #endif  // OPENCLMANAGER_H

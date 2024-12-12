@@ -4,9 +4,8 @@
 HistogramEqualizationStepCL::HistogramEqualizationStepCL(OpenCLManager& manager)
     : openclManager(manager)
 {
-    // Load the histogram equalization kernel
-    openclManager.loadKernel("histogram_equalization",
-                             "src/opencl/kernels/histogram_equalization.cl");
+    std::string kernelPath = std::string(std::getenv("PROJECT_ROOT")) + "/src/openCL/kernels/histogram_equalization.cl";
+    openclManager.loadKernel("histogram_equalization", kernelPath);
     kernel = openclManager.getKernel("histogram_equalization");
 }
 

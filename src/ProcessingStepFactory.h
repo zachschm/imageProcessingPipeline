@@ -9,7 +9,7 @@
 #include "GrayscaleStep.h"
 #include "GrayscaleStepCL.h"
 #include "HistogramEqualizationStep.h"
-#include "HistogramEqualizationStepCl.h"  // Ensure correct case
+#include "HistogramEqualizationStepCL.h" 
 #include "ProcessingParameters.h"
 #include "ResizeStep.h"
 #include "ResizeStepCL.h"

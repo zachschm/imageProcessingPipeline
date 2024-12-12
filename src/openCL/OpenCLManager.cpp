@@ -4,7 +4,19 @@
 #include <iostream>
 #include <sstream>
 
-OpenCLManager::OpenCLManager() = default;
+OpenCLManager::OpenCLManager()
+{
+    try
+    {
+        initialize();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Failed to initialize OpenCLManager: " << e.what()
+                  << std::endl;
+        throw;
+    }
+}
 
 OpenCLManager::~OpenCLManager()
 {
@@ -21,22 +33,50 @@ void OpenCLManager::initialize()
         throw std::runtime_error("No OpenCL platforms found.");
     }
 
-    // Use the first platform
-    cl::Platform platform = platforms.front();
+    // Select the NVIDIA CUDA platform
+    cl::Platform selectedPlatform;
+    for (const auto& p : platforms)
+    {
+        std::string platformName = p.getInfo<CL_PLATFORM_NAME>();
+        if (platformName.find("NVIDIA CUDA") != std::string::npos)
+        {
+            selectedPlatform = p;
+            break;
+        }
+    }
+
+    if (selectedPlatform() == nullptr)
+    {
+        throw std::runtime_error("NVIDIA CUDA platform not found.");
+    }
+
+    std::cout << "Selected platform: " << selectedPlatform.getInfo<CL_PLATFORM_NAME>() << std::endl;
 
     // Get GPU devices
     std::vector<cl::Device> devices;
-    platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
-    if (devices.size() < 4)
+    selectedPlatform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+    if (devices.empty())
     {
-        throw std::runtime_error("Expected at least 4 GPUs.");
+        throw std::runtime_error("No GPU devices found on the selected platform.");
     }
 
-    // Create a single context with multiple devices
+    std::cout << "Available devices: " << devices.size() << std::endl;
+    for (const auto& device : devices)
+    {
+        std::cout << "Device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
+    }
+
+    // Ensure at least 4 GPUs are available
+    if (devices.size() < 4)
+    {
+        throw std::runtime_error("Less than 4 GPUs detected.");
+    }
+
+    // Create a unified context
     std::vector<cl::Device> chosenDevices(devices.begin(), devices.begin() + 4);
     unifiedContext = cl::Context(chosenDevices);
 
-    // Create command queues for each device
+    // Create command queues
     gpuContexts.clear();
     for (int i = 0; i < 4; ++i)
     {

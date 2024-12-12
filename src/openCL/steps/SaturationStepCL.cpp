@@ -4,7 +4,8 @@ SaturationStepCL::SaturationStepCL(OpenCLManager& manager, float scale)
     : manager(manager)
     , scale(scale)
 {
-    manager.loadKernel("adjustSaturation", "src/opencl/kernels/saturation.cl");
+    std::string kernelPath = std::string(std::getenv("PROJECT_ROOT")) + "/src/openCL/kernels/saturation.cl";
+    manager.loadKernel("adjustSaturation", kernelPath);
     kernel = manager.getKernel("adjustSaturation");
 }
 

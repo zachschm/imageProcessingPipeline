@@ -8,8 +8,8 @@ GaussianBlurStepCL::GaussianBlurStepCL(OpenCLManager& manager, int kernelSize,
     , kernelSize(kernelSize)
     , sigma(sigma)
 {
-    openclManager.loadKernel("gaussian_blur",
-                             "src/opencl/kernels/gaussian_blur.cl");
+    std::string kernelPath = std::string(std::getenv("PROJECT_ROOT")) + "/src/openCL/kernels/gaussian_blur.cl";
+    openclManager.loadKernel("gaussian_blur", kernelPath);
     kernel = openclManager.getKernel("gaussian_blur");
     precomputeKernel();
 }

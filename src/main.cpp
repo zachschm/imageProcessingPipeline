@@ -29,9 +29,16 @@ int main(int argc, char* argv[])
 
         if (processingMode == "gpu")
         {
+            const char* projectRoot = std::getenv("PROJECT_ROOT");
+    if (!projectRoot)
+    {
+        throw std::runtime_error(
+            "Environment variable PROJECT_ROOT is not set.");
+    }
             std::cout << "Initializing OpenCLManager for GPU processing..."
                       << std::endl;
             openclManager = new OpenCLManager();
+            std::cout << "Number of gpus: " << openclManager->getDeviceCount() << std::endl;
             if (openclManager->getDeviceCount() < 4)
             {
                 throw std::runtime_error(

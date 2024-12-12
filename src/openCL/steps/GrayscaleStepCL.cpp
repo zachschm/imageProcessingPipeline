@@ -3,8 +3,8 @@
 GrayscaleStepCL::GrayscaleStepCL(OpenCLManager& manager)
     : openclManager(manager)
 {
-    // Load and compile the grayscale kernel
-    openclManager.loadKernel("grayscale", "src/opencl/kernels/grayscale.cl");
+    std::string kernelPath = std::string(std::getenv("PROJECT_ROOT")) + "/src/openCL/kernels/grayscale.cl";
+    openclManager.loadKernel("grayscale", kernelPath);
     kernel = openclManager.getKernel("grayscale");
 }
 

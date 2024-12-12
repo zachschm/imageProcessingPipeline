@@ -26,12 +26,12 @@ CXXFLAGS := -std=c++17 -I$(PROJECT_ROOT)/include \
              -I.
 
 
-LDFLAGS := -framework OpenCL -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+LDFLAGS := -lOpenCL -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 
 # Directories
 BIN_DIR := ../bin
-TARGET := $(BIN_DIR)/ImageProcessingPipeline
+TARGET := $(BIN_DIR)/imageProcessingPipeline
 
 # Default target
 .PHONY: all clean

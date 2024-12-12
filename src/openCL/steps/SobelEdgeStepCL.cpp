@@ -5,7 +5,8 @@
 SobelEdgeStepCL::SobelEdgeStepCL(OpenCLManager& manager)
     : manager(manager)
 {
-    manager.loadKernel("sobelEdge", "src/opencl/kernels/sobel_edge.cl");
+    std::string kernelPath = std::string(std::getenv("PROJECT_ROOT")) + "/src/openCL/kernels/sobel_edge.cl";
+    manager.loadKernel("sobelEdge", kernelPath);
     kernel = manager.getKernel("sobelEdge");
 }
 
